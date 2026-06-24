@@ -1,0 +1,28 @@
+---
+- name: Parse survey inputs
+  ansible.builtin.set_fact:
+    _categories: "{{ win_patch_categories.split(',') | map('trim') | list }}"
+    _accept_list: "{{ win_patch_accept_list.split(',') | map('trim') | select | list }}"
+    _reject_list: "{{ win_patch_reject_list.split(',') | map('trim') | select | list }}"
+
+- name: Run pre-patch checks
+  ansible.builtin.include_tasks: pre_patch.yml
+
+- name: Search for available updates
+  ansible.builtin.include_tasks: search.yml
+
+- name: Install updates
+  ansible.builtin.include_tasks: install.yml
+  when: update_search.found_update_count | int > 0
+
+- name: Skip message when no updates available
+  ansible.builtin.debug:
+    msg: "No updates to install — system is current"
+  when: update_search.found_update_count | int == 0
+
+- name: Run post-patch validation
+  ansible.builtin.include_tasks: validate.yml
+  when: update_result is defined
+
+- name: Display summary
+  ansible.builtin.include_tasks: summary.yml

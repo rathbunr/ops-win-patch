@@ -1,0 +1,21 @@
+---
+# Update categories - override via AAP survey as comma-separated string
+win_patch_categories: "SecurityUpdates,CriticalUpdates,DefinitionUpdates"
+
+# KB accept/reject lists - override via AAP survey as comma-separated string
+win_patch_accept_list: ""
+win_patch_reject_list: ""
+
+# Reboot behavior
+win_patch_reboot: true
+win_patch_reboot_timeout: 900
+
+# Disk space minimum (GB) - fails if below this threshold
+win_patch_min_disk_gb: 5
+
+# Log path on target host
+win_patch_log_path: "C:\\Windows\\Temp\\ansible_wu.txt"
+
+# Post-reboot stabilization delay (seconds)
+win_patch_stabilize_delay: 30
+win_patch_stabilize_timeout: 300

@@ -1,0 +1,23 @@
+---
+- name: Install updates
+  block:
+    - name: Install and reboot if required
+      ansible.windows.win_updates:
+        category_names: "{{ _categories }}"
+        accept_list: "{{ _accept_list if _accept_list | length > 0 else omit }}"
+        reject_list: "{{ _reject_list if _reject_list | length > 0 else omit }}"
+        state: installed
+        reboot: "{{ win_patch_reboot }}"
+        reboot_timeout: "{{ win_patch_reboot_timeout }}"
+        log_path: "{{ win_patch_log_path }}"
+      register: update_result
+
+  rescue:
+    - name: Record failure
+      ansible.builtin.set_fact:
+        patch_failed: true
+        patch_error: "{{ ansible_failed_result.msg | default('Unknown error during patching') }}"
+
+    - name: Report failure
+      ansible.builtin.debug:
+        msg: "Patching failed on {{ inventory_hostname }}: {{ patch_error }}"

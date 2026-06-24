@@ -1,0 +1,27 @@
+---
+- name: Build results
+  ansible.builtin.set_fact:
+    patch_summary:
+      hostname: "{{ inventory_hostname }}"
+      status: "{{ 'failed' if (patch_failed | default(false)) else 'success' }}"
+      error: "{{ patch_error | default('') }}"
+      pre_patch_disk_gb: "{{ pre_patch.free_disk_gb }}"
+      pre_patch_reboot_pending: "{{ pre_patch.reboot_pending }}"
+      updates_found: "{{ update_search.found_update_count | default(0) }}"
+      updates_installed: "{{ update_result.installed_update_count | default(0) }}"
+      reboot_required: "{{ update_result.reboot_required | default(false) }}"
+      updates_remaining: "{{ remaining_updates.found_update_count | default('N/A') }}"
+      stopped_services: "{{ svc_check.stopped_services | default([]) }}"
+
+- name: Display results
+  ansible.builtin.debug:
+    msg:
+      - "Host: {{ patch_summary.hostname }}"
+      - "Status: {{ patch_summary.status }}"
+      - "Disk Free: {{ patch_summary.pre_patch_disk_gb }}GB"
+      - "Updates Found: {{ patch_summary.updates_found }}"
+      - "Updates Installed: {{ patch_summary.updates_installed }}"
+      - "Reboot Required: {{ patch_summary.reboot_required }}"
+      - "Updates Remaining: {{ patch_summary.updates_remaining }}"
+      - "Stopped Services: {{ patch_summary.stopped_services | join(', ') if patch_summary.stopped_services | length > 0 else 'None' }}"
+      - "{{ 'ERROR: ' + patch_summary.error if patch_summary.error else '' }}"

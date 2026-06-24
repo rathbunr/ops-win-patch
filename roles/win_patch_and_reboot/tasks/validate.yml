@@ -1,0 +1,42 @@
+---
+- name: Wait for system to stabilize
+  ansible.builtin.wait_for_connection:
+    timeout: "{{ win_patch_stabilize_timeout }}"
+    delay: "{{ win_patch_stabilize_delay }}"
+  when: update_result.reboot_required | default(false) | bool
+
+- name: Refresh facts after patching
+  ansible.builtin.setup:
+    gather_subset: min
+
+- name: Check auto services are running
+  ansible.windows.win_shell: |
+    $stopped = @()
+    $baseline = '{{ baseline_services | to_json }}' | ConvertFrom-Json
+    foreach ($svc in $baseline) {
+        $current = Get-Service -Name $svc -ErrorAction SilentlyContinue
+        if ($current -and $current.Status -ne 'Running') {
+            $stopped += $svc
+        }
+    }
+    [PSCustomObject]@{
+        stopped_count = $stopped.Count
+        stopped_services = $stopped
+    } | ConvertTo-Json
+  register: _svc_check_raw
+  changed_when: false
+
+- name: Parse service check
+  ansible.builtin.set_fact:
+    svc_check: "{{ _svc_check_raw.stdout | from_json }}"
+
+- name: Warn on stopped services
+  ansible.builtin.debug:
+    msg: "WARNING: {{ svc_check.stopped_count }} baseline services not running: {{ svc_check.stopped_services | join(', ') }}"
+  when: svc_check.stopped_count | int > 0
+
+- name: Check for remaining updates
+  ansible.windows.win_updates:
+    category_names: "{{ _categories }}"
+    state: searched
+  register: remaining_updates

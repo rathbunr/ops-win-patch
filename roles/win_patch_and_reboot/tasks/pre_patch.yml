@@ -1,0 +1,41 @@
+---
+- name: Gather system info
+  ansible.windows.win_shell: |
+    $disk = Get-CimInstance Win32_LogicalDisk -Filter "DeviceID='C:'" |
+      Select-Object @{N='free_gb';E={[math]::Round($_.FreeSpace/1GB,2)}}
+    $os = Get-CimInstance Win32_OperatingSystem |
+      Select-Object LastBootUpTime
+    $pending = Test-Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired"
+    [PSCustomObject]@{
+        free_disk_gb = $disk.free_gb
+        last_boot = $os.LastBootUpTime.ToString("yyyy-MM-dd HH:mm:ss")
+        reboot_pending = $pending
+    } | ConvertTo-Json
+  register: _pre_patch_raw
+  changed_when: false
+
+- name: Parse system info
+  ansible.builtin.set_fact:
+    pre_patch: "{{ _pre_patch_raw.stdout | from_json }}"
+
+- name: Fail if disk space critically low
+  ansible.builtin.fail:
+    msg: "Only {{ pre_patch.free_disk_gb }}GB free on C: — minimum {{ win_patch_min_disk_gb }}GB required"
+  when: pre_patch.free_disk_gb | float < win_patch_min_disk_gb | float
+
+- name: Warn if reboot already pending
+  ansible.builtin.debug:
+    msg: "WARNING: Reboot already pending before patching. Last boot: {{ pre_patch.last_boot }}"
+  when: pre_patch.reboot_pending | bool
+
+- name: Capture running services baseline
+  ansible.windows.win_shell: |
+    Get-Service |
+      Where-Object { $_.Status -eq 'Running' -and $_.StartType -eq 'Automatic' } |
+      Select-Object -ExpandProperty Name | ConvertTo-Json
+  register: _baseline_raw
+  changed_when: false
+
+- name: Store service baseline
+  ansible.builtin.set_fact:
+    baseline_services: "{{ _baseline_raw.stdout | from_json }}"
