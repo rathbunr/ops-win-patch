@@ -40,3 +40,7 @@
     category_names: "{{ _categories }}"
     state: searched
   register: remaining_updates
+
+- name: Re-enable BitLocker protection
+  ansible.windows.win_shell: Resume-BitLocker -MountPoint "C:"
+  when: pre_patch.bitlocker_enabled | bool

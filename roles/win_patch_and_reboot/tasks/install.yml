@@ -1,6 +1,10 @@
 ---
 - name: Install updates
   block:
+    - name: Suspend BitLocker for reboot
+      ansible.windows.win_shell: Suspend-BitLocker -MountPoint "C:" -RebootCount 3
+      when: pre_patch.bitlocker_enabled | bool
+
     - name: Install and reboot if required
       ansible.windows.win_updates:
         category_names: "{{ _categories }}"
@@ -11,9 +15,6 @@
         reboot_timeout: "{{ win_patch_reboot_timeout }}"
         log_path: "{{ win_patch_log_path }}"
       register: update_result
-      until: update_result.found_update_count | default(0) | int == 0
-      retries: 3
-      delay: 30
 
   rescue:
     - name: Record failure

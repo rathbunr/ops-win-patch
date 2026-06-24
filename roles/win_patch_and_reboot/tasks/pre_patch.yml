@@ -6,10 +6,12 @@
     $os = Get-CimInstance Win32_OperatingSystem |
       Select-Object LastBootUpTime
     $pending = Test-Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired"
+    $bl = Get-BitLockerVolume -MountPoint "C:" -ErrorAction SilentlyContinue
     [PSCustomObject]@{
         free_disk_gb = $disk.free_gb
         last_boot = $os.LastBootUpTime.ToString("yyyy-MM-dd HH:mm:ss")
         reboot_pending = $pending
+        bitlocker_enabled = ($null -ne $bl -and $bl.ProtectionStatus -eq 'On')
     } | ConvertTo-Json
   register: _pre_patch_raw
   changed_when: false
