@@ -7,9 +7,41 @@ This role talks directly to the Windows Update Agent (WUA) on each host. It work
 ## Requirements
 
 - `ansible.windows` collection
-- WinRM over HTTPS with Kerberos authentication
+- WinRM over HTTPS or OpenSSH for Windows
 - Target hosts must have the Windows Update service running
 - Ansible user must be a member of local Administrators
+
+## Connection Configuration
+
+This role is transport-agnostic. Set connection variables via AAP credential injectors, group vars, host vars, or play vars.
+
+### WinRM over HTTPS (Kerberos)
+
+```yaml
+ansible_connection: winrm
+ansible_winrm_transport: kerberos
+ansible_winrm_server_cert_validation: validate
+ansible_port: 5986
+```
+
+### WinRM over HTTPS (NTLM)
+
+```yaml
+ansible_connection: winrm
+ansible_winrm_transport: ntlm
+ansible_winrm_server_cert_validation: validate
+ansible_port: 5986
+```
+
+### SSH (OpenSSH for Windows)
+
+```yaml
+ansible_connection: ssh
+ansible_shell_type: powershell
+ansible_port: 22
+```
+
+Note: SSH transport has not been validated with `ansible.windows.win_updates`. The Windows Update COM objects may behave differently under an SSH session versus a WinRM logon token. Test before using in production.
 
 ## Repository Structure
 
@@ -107,3 +139,4 @@ Set `win_patch_serial` to `5` in the survey. Hosts are patched in groups of 5 â€
 - This role does not depend on `microsoft.mecm` or MECM server access. It is client-side only and works in any environment where `ansible.windows.win_updates` is available.
 - The update source is whatever the host is configured to use. If the host points to WSUS, updates come from WSUS. If it points to Microsoft Update, updates come from the internet.
 - The service baseline comparison captures all services that are both running and set to automatic start before patching. After patching and reboot, any service from that baseline that is no longer running is flagged in the summary. This is an advisory warning, not a failure.
+- BitLocker is detected during pre-patch checks. If enabled on C:, BitLocker is suspended for up to 3 reboots before updates are installed, then explicitly re-enabled after post-patch validation completes. This prevents encrypted hosts from being locked at the recovery key prompt after an automated reboot.
