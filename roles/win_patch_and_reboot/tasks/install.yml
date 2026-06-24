@@ -11,6 +11,9 @@
         reboot_timeout: "{{ win_patch_reboot_timeout }}"
         log_path: "{{ win_patch_log_path }}"
       register: update_result
+      until: update_result.found_update_count | default(0) | int == 0
+      retries: 3
+      delay: 30
 
   rescue:
     - name: Record failure
