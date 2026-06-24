@@ -1,6 +1,6 @@
 ---
 # Update categories - override via AAP survey as comma-separated string
-win_patch_categories: "SecurityUpdates,CriticalUpdates,DefinitionUpdates"
+win_patch_categories: "SecurityUpdates,CriticalUpdates"
 
 # KB accept/reject lists - override via AAP survey as comma-separated string
 win_patch_accept_list: ""
